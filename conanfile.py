@@ -3,6 +3,8 @@
 
 from conans import ConanFile, AutoToolsBuildEnvironment, tools, VisualStudioBuildEnvironment
 import os
+import glob
+import shutil
 
 
 class CairoConan(ConanFile):
@@ -74,22 +76,55 @@ class CairoConan(ConanFile):
                     env_build = AutoToolsBuildEnvironment(self)
                     env_build.make(args=['-f', 'Makefile.win32', 'CFG=%s' % str(self.settings.build_type).lower()])
 
+    def copy_pkg_config(self, name):
+        root = self.deps_cpp_info[name].rootpath
+        pc_dir = os.path.join(root, 'lib', 'pkgconfig')
+        pc_files = glob.glob('%s/*.pc' % pc_dir)
+        if not pc_files:  # zlib store .pc in root
+            pc_files = glob.glob('%s/*.pc' % root)
+        for pc_name in pc_files:
+            new_pc = os.path.join('pkgconfig', os.path.basename(pc_name))
+            self.output.warn('copy .pc file %s' % os.path.basename(pc_name))
+            shutil.copy(pc_name, new_pc)
+            prefix = tools.unix_path(root) if self.settings.os == 'Windows' else root
+            tools.replace_prefix_in_pc_file(new_pc, prefix)
+
     def build_configure(self):
-        raise Exception('TODO')
+        with tools.chdir(self.source_subfolder):
+            # disable build of test suite
+            tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)', '')
+            os.makedirs('pkgconfig')
+            for lib in ['libpng', 'zlib', 'pixman']:
+                self.copy_pkg_config(lib)
+
+            pkg_config_path = os.path.abspath('pkgconfig')
+            pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
+
+            configure_args = ['--disable-ft']
+            if self.options.shared:
+                configure_args.extend(['--disable-static', '--enable-shared'])
+            else:
+                configure_args.extend(['--enable-static', '--disable-shared'])
+            env_build = AutoToolsBuildEnvironment(self)
+            env_build.pic = self.options.fPIC
+            env_build.configure(args=configure_args, pkg_config_paths=[pkg_config_path])
+            env_build.make()
+            env_build.install()
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self.source_subfolder)
         if self.is_msvc:
             src = os.path.join(self.source_subfolder, 'src')
-            self.copy(pattern="cairo-version.h", dst="include", src=self.source_subfolder)
-            self.copy(pattern="cairo-features.h", dst="include", src=src)
-            self.copy(pattern="cairo.h", dst="include", src=src)
-            self.copy(pattern="cairo-deprecated.h", dst="include", src=src)
-            self.copy(pattern="cairo-win32.h", dst="include", src=src)
-            self.copy(pattern="cairo-script.h", dst="include", src=src)
-            self.copy(pattern="cairo-ps.h", dst="include", src=src)
-            self.copy(pattern="cairo-pdf.h", dst="include", src=src)
-            self.copy(pattern="cairo-svg.h", dst="include", src=src)
+            inc = os.path.join('include', 'cairo')
+            self.copy(pattern="cairo-version.h", dst=inc, src=self.source_subfolder)
+            self.copy(pattern="cairo-features.h", dst=inc, src=src)
+            self.copy(pattern="cairo.h", dst=inc, src=src)
+            self.copy(pattern="cairo-deprecated.h", dst=inc, src=src)
+            self.copy(pattern="cairo-win32.h", dst=inc, src=src)
+            self.copy(pattern="cairo-script.h", dst=inc, src=src)
+            self.copy(pattern="cairo-ps.h", dst=inc, src=src)
+            self.copy(pattern="cairo-pdf.h", dst=inc, src=src)
+            self.copy(pattern="cairo-svg.h", dst=inc, src=src)
             if self.options.shared:
                 self.copy(pattern="*cairo.lib", dst="lib", src=src, keep_path=False)
                 self.copy(pattern="*cairo.dll", dst="bin", src=src, keep_path=False)
@@ -103,3 +138,4 @@ class CairoConan(ConanFile):
                 self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
         else:
             self.cpp_info.libs = ['cairo']
+        self.cpp_info.includedirs.append(os.path.join('include', 'cairo'))
