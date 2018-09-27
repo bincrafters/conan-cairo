@@ -105,6 +105,8 @@ class CairoConan(ConanFile):
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
                 configure_args.extend(['--enable-static', '--disable-shared'])
+
+            self.run('PKG_CONFIG_PATH=%s ./autogen.sh' % pkg_config_path)
             env_build = AutoToolsBuildEnvironment(self)
             env_build.pic = self.options.fPIC
             env_build.configure(args=configure_args, pkg_config_paths=[pkg_config_path])
