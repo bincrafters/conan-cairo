@@ -1,83 +1,101 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, AutoToolsBuildEnvironment, tools, VisualStudioBuildEnvironment
 import os
 
 
-class LibnameConan(ConanFile):
-    name = "libname"
-    version = "0.0.0"
-    description = "Keep it short"
-    url = "https://github.com/bincrafters/conan-libname"
-    homepage = "https://github.com/original_author/original_lib"
+class CairoConan(ConanFile):
+    name = "cairo"
+    version = "1.15.14"
+    description = "Cairo is a 2D graphics library with support for multiple output devices"
+    url = "https://github.com/bincrafters/conan-cairo"
+    homepage = "https://cairographics.org/"
     author = "Bincrafters <bincrafters@gmail.com>"
-    # Indicates License type of the packaged library
-    license = "MIT"
-
-    # Packages the license for the conanfile.py
+    license = "GNU LGPL 2.1"
     exports = ["LICENSE.md"]
-
-    # Remove following lines if the target lib does not use cmake.
-    exports_sources = ["CMakeLists.txt"]
-    generators = "cmake"
-
-    # Options may need to change depending on the packaged library.
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = "shared=False", "fPIC=True"
 
-    # Custom attributes for Bincrafters recipe conventions
     source_subfolder = "source_subfolder"
     build_subfolder = "build_subfolder"
-
-    # Use version ranges for dependencies unless there's a reason not to
-    # Update 2/9/18 - Per conan team, ranges are slow to resolve.
-    # So, with libs like zlib, updates are very rare, so we now use static version
-
-
-    requires = (
-        "OpenSSL/[>=1.0.2l]@conan/stable",
-        "zlib/1.2.11@conan/stable"
-    )
+    requires = 'zlib/1.2.11@conan/stable', 'pixman/0.34.0@bincrafters/stable', 'libpng/1.6.34@bincrafters/stable'
 
     def config_options(self):
+        del self.settings.compiler.libcxx
         if self.settings.os == 'Windows':
             del self.options.fPIC
 
+    def build_requirements(self):
+        self.build_requires('7z_installer/1.0@conan/stable')
+        if self.settings.os == 'Windows':
+            self.build_requires('msys2_installer/20161025@bincrafters/stable')
+
+    @property
+    def is_msvc(self):
+        return self.settings.compiler == 'Visual Studio'
+
     def source(self):
-        source_url = "https://github.com/libauthor/libname"
-        tools.get("{0}/archive/v{1}.tar.gz".format(source_url, self.version))
-        extracted_dir = self.name + "-" + self.version
-
-        #Rename to "source_subfolder" is a convention to simplify later steps
-        os.rename(extracted_dir, self.source_subfolder)
-
-    def configure_cmake(self):
-        cmake = CMake(self)
-        cmake.definitions["BUILD_TESTS"] = False # example
-        if self.settings.os != 'Windows':
-            cmake.definitions['CMAKE_POSITION_INDEPENDENT_CODE'] = self.options.fPIC
-        cmake.configure(build_folder=self.build_subfolder)
-        return cmake
+        tarball_name = 'cairo-%s.tar' % self.version
+        archive_name = '%s.xz' % tarball_name
+        tools.download('https://www.cairographics.org/snapshots/%s' % archive_name, archive_name)
+        self.run('7z x %s' % archive_name)
+        self.run('7z x %s' % tarball_name)
+        os.rename('cairo-%s' % self.version, self.source_subfolder)
+        os.unlink(tarball_name)
+        os.unlink(archive_name)
 
     def build(self):
-        cmake = self.configure_cmake()
-        cmake.build()
+        if self.is_msvc:
+            self.build_msvc()
+        else:
+            self.build_configure()
+
+    def build_msvc(self):
+        with tools.chdir(self.source_subfolder):
+            # https://cairographics.org/end_to_end_build_for_win32/
+            win32_common = os.path.join('build', 'Makefile.win32.common')
+            tools.replace_in_file(win32_common, '-MD ', '-%s ' % self.settings.compiler.runtime)
+            tools.replace_in_file(win32_common, '-MDd ', '-%s ' % self.settings.compiler.runtime)
+            tools.replace_in_file(win32_common, '$(ZLIB_PATH)/zdll.lib', self.deps_cpp_info['zlib'].libs[0] + '.lib')
+            tools.replace_in_file(win32_common, '$(LIBPNG_PATH)/libpng.lib',
+                                  self.deps_cpp_info['libpng'].libs[0] + '.lib')
+            tools.replace_in_file(win32_common, '$(PIXMAN_PATH)/pixman/$(CFG)/pixman-1.lib',
+                                  self.deps_cpp_info['pixman'].libs[0] + '.lib')
+            with tools.vcvars(self.settings):
+                env_msvc = VisualStudioBuildEnvironment(self)
+                env_msvc.flags.append('/FS')  # C1041 if multiple CL.EXE write to the same .PDB file, please use /FS
+                with tools.environment_append(env_msvc.vars):
+                    env_build = AutoToolsBuildEnvironment(self)
+                    env_build.make(args=['-f', 'Makefile.win32', 'CFG=%s' % str(self.settings.build_type).lower()])
+
+    def build_configure(self):
+        raise Exception('TODO')
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self.source_subfolder)
-        cmake = self.configure_cmake()
-        cmake.install()
-        # If the CMakeLists.txt has a proper install method, the steps below may be redundant
-        # If so, you can just remove the lines below
-        include_folder = os.path.join(self.source_subfolder, "include")
-        self.copy(pattern="*", dst="include", src=include_folder)
-        self.copy(pattern="*.dll", dst="bin", keep_path=False)
-        self.copy(pattern="*.lib", dst="lib", keep_path=False)
-        self.copy(pattern="*.a", dst="lib", keep_path=False)
-        self.copy(pattern="*.so*", dst="lib", keep_path=False)
-        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
+        if self.is_msvc:
+            src = os.path.join(self.source_subfolder, 'src')
+            self.copy(pattern="cairo-version.h", dst="include", src=self.source_subfolder)
+            self.copy(pattern="cairo-features.h", dst="include", src=src)
+            self.copy(pattern="cairo.h", dst="include", src=src)
+            self.copy(pattern="cairo-deprecated.h", dst="include", src=src)
+            self.copy(pattern="cairo-win32.h", dst="include", src=src)
+            self.copy(pattern="cairo-script.h", dst="include", src=src)
+            self.copy(pattern="cairo-ps.h", dst="include", src=src)
+            self.copy(pattern="cairo-pdf.h", dst="include", src=src)
+            self.copy(pattern="cairo-svg.h", dst="include", src=src)
+            if self.options.shared:
+                self.copy(pattern="*cairo.lib", dst="lib", src=src, keep_path=False)
+                self.copy(pattern="*cairo.dll", dst="bin", src=src, keep_path=False)
+            else:
+                self.copy(pattern="*cairo-static.lib", dst="lib", src=src, keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        if self.is_msvc:
+            self.cpp_info.libs = ['cairo' if self.options.shared else 'cairo-static']
+            if not self.options.shared:
+                self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
+        else:
+            self.cpp_info.libs = ['cairo']
