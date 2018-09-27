@@ -28,8 +28,8 @@ class CairoConan(ConanFile):
             del self.options.fPIC
 
     def build_requirements(self):
-        self.build_requires('7z_installer/1.0@conan/stable')
         if self.settings.os == 'Windows':
+            self.build_requires('7z_installer/1.0@conan/stable')
             self.build_requires('msys2_installer/20161025@bincrafters/stable')
 
     @property
@@ -40,10 +40,14 @@ class CairoConan(ConanFile):
         tarball_name = 'cairo-%s.tar' % self.version
         archive_name = '%s.xz' % tarball_name
         tools.download('https://www.cairographics.org/snapshots/%s' % archive_name, archive_name)
-        self.run('7z x %s' % archive_name)
-        self.run('7z x %s' % tarball_name)
+
+        if self.settings.os == 'Windows':
+            self.run('7z x %s' % archive_name)
+            self.run('7z x %s' % tarball_name)
+            os.unlink(tarball_name)
+        else:
+            self.run('tar -xJf %s' % archive_name)
         os.rename('cairo-%s' % self.version, self.source_subfolder)
-        os.unlink(tarball_name)
         os.unlink(archive_name)
 
     def build(self):
