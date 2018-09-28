@@ -107,8 +107,11 @@ class CairoConan(ConanFile):
                 configure_args.extend(['--enable-static', '--disable-shared'])
 
             env_build = AutoToolsBuildEnvironment(self)
+            if self.settings.os == 'Macos':
+                env_build.link_flags.extend(['-framework CoreGraphics',
+                                             '-framework CoreFoundation'])
             with tools.environment_append(env_build.vars):
-                self.run('PKG_CONFIG_PATH=%s ./autogen.sh' % pkg_config_path)
+                self.run('PKG_CONFIG_PATH=%s NOCONFIGURE=1 ./autogen.sh' % pkg_config_path)
             env_build.pic = self.options.fPIC
             env_build.configure(args=configure_args, pkg_config_paths=[pkg_config_path])
             env_build.make()
