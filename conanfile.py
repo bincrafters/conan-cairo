@@ -110,6 +110,8 @@ class CairoConan(ConanFile):
             if self.settings.os == 'Macos':
                 env_build.link_flags.extend(['-framework CoreGraphics',
                                              '-framework CoreFoundation'])
+            if str(self.settings.compiler) in ['gcc', 'clang', 'apple-clang']:
+                env_build.flags.append('-Wno-enum-conversion')
             with tools.environment_append(env_build.vars):
                 self.run('PKG_CONFIG_PATH=%s NOCONFIGURE=1 ./autogen.sh' % pkg_config_path)
             env_build.pic = self.options.fPIC
