@@ -138,12 +138,11 @@ class CairoConan(ConanFile):
                 self.copy(pattern="*cairo.dll", dst="bin", src=src, keep_path=False)
             else:
                 self.copy(pattern="*cairo-static.lib", dst="lib", src=src, keep_path=False)
+                shutil.move(os.path.join(self.package_folder, 'lib', "cairo-static.lib"),
+                            os.path.join(self.package_folder, 'lib', "cairo.lib"))
 
     def package_info(self):
-        if self.is_msvc:
-            self.cpp_info.libs = ['cairo' if self.options.shared else 'cairo-static']
-            if not self.options.shared:
-                self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
-        else:
-            self.cpp_info.libs = ['cairo']
+        self.cpp_info.libs = ['cairo']
+        if self.is_msvc and not self.options.shared:
+            self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
         self.cpp_info.includedirs.append(os.path.join('include', 'cairo'))
