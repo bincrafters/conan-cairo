@@ -25,7 +25,7 @@ class CairoConan(ConanFile):
     _build_subfolder = "build_subfolder"
     requires = (
         "zlib/1.2.11@conan/stable",
-        "pixman/0.34.0@bincrafters/stable",
+        "pixman/0.38.0@bincrafters/stable",
         "libpng/1.6.36@bincrafters/stable"
     )
 
