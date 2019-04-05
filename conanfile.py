@@ -23,7 +23,11 @@ class CairoConan(ConanFile):
 
     _source_subfolder = "source_subfolder"
     _build_subfolder = "build_subfolder"
-    requires = 'zlib/1.2.11@conan/stable', 'pixman/0.34.0@bincrafters/stable', 'libpng/1.6.34@bincrafters/stable'
+    requires = (
+        "zlib/1.2.11@conan/stable",
+        "pixman/0.34.0@bincrafters/stable",
+        "libpng/1.6.36@bincrafters/stable"
+    )
 
     def config_options(self):
         del self.settings.compiler.libcxx
