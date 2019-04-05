@@ -9,19 +9,20 @@ import shutil
 
 class CairoConan(ConanFile):
     name = "cairo"
-    version = "1.15.14"
+    version = "1.17.2"
     description = "Cairo is a 2D graphics library with support for multiple output devices"
+    topics = ("conan", "cairo", "graphics")
     url = "https://github.com/bincrafters/conan-cairo"
     homepage = "https://cairographics.org/"
     author = "Bincrafters <bincrafters@gmail.com>"
-    license = "GNU LGPL 2.1"
+    license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = "shared=False", "fPIC=True"
+    default_options = {'shared': False, 'fPIC': True}
 
-    source_subfolder = "source_subfolder"
-    build_subfolder = "build_subfolder"
+    _source_subfolder = "source_subfolder"
+    _build_subfolder = "build_subfolder"
     requires = 'zlib/1.2.11@conan/stable', 'pixman/0.34.0@bincrafters/stable', 'libpng/1.6.34@bincrafters/stable'
 
     def config_options(self):
@@ -49,7 +50,7 @@ class CairoConan(ConanFile):
             os.unlink(tarball_name)
         else:
             self.run('tar -xJf %s' % archive_name)
-        os.rename('cairo-%s' % self.version, self.source_subfolder)
+        os.rename('cairo-%s' % self.version, self._source_subfolder)
         os.unlink(archive_name)
 
     def build(self):
@@ -59,7 +60,7 @@ class CairoConan(ConanFile):
             self.build_configure()
 
     def build_msvc(self):
-        with tools.chdir(self.source_subfolder):
+        with tools.chdir(self._source_subfolder):
             # https://cairographics.org/end_to_end_build_for_win32/
             win32_common = os.path.join('build', 'Makefile.win32.common')
             tools.replace_in_file(win32_common, '-MD ', '-%s ' % self.settings.compiler.runtime)
@@ -90,7 +91,7 @@ class CairoConan(ConanFile):
             tools.replace_prefix_in_pc_file(new_pc, prefix)
 
     def build_configure(self):
-        with tools.chdir(self.source_subfolder):
+        with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)', '')
             os.makedirs('pkgconfig')
@@ -120,11 +121,11 @@ class CairoConan(ConanFile):
             env_build.install()
 
     def package(self):
-        self.copy(pattern="LICENSE", dst="licenses", src=self.source_subfolder)
+        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
         if self.is_msvc:
-            src = os.path.join(self.source_subfolder, 'src')
+            src = os.path.join(self._source_subfolder, 'src')
             inc = os.path.join('include', 'cairo')
-            self.copy(pattern="cairo-version.h", dst=inc, src=self.source_subfolder)
+            self.copy(pattern="cairo-version.h", dst=inc, src=self._source_subfolder)
             self.copy(pattern="cairo-features.h", dst=inc, src=src)
             self.copy(pattern="cairo.h", dst=inc, src=src)
             self.copy(pattern="cairo-deprecated.h", dst=inc, src=src)
