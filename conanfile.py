@@ -18,21 +18,24 @@ class CairoConan(ConanFile):
     license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {'shared': False, 'fPIC': True}
+    options = {"shared": [True, False], "fPIC": [True, False], "enable_ft": [True, False]}
+    default_options = {'shared': False, 'fPIC': True, "enable_ft": True}
 
     _source_subfolder = "source_subfolder"
     _build_subfolder = "build_subfolder"
-    requires = (
-        "zlib/1.2.11@conan/stable",
-        "pixman/0.38.0@bincrafters/stable",
-        "libpng/1.6.36@bincrafters/stable"
-    )
 
     def config_options(self):
         del self.settings.compiler.libcxx
         if self.settings.os == 'Windows':
             del self.options.fPIC
+
+    def requirements(self):
+        if self.options.enable_ft:
+            self.requires("freetype/2.9.0@bincrafters/stable")
+
+        self.requires("zlib/1.2.11@conan/stable")
+        self.requires("pixman/0.38.0@bincrafters/stable")
+        self.requires("libpng/1.6.36@bincrafters/stable")
 
     def build_requirements(self):
         if self.settings.os == 'Windows':
@@ -97,15 +100,21 @@ class CairoConan(ConanFile):
     def build_configure(self):
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
-            tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)', '')
+            tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
+                                  '')
             os.makedirs('pkgconfig')
             for lib in ['libpng', 'zlib', 'pixman']:
                 self.copy_pkg_config(lib)
 
+            if self.options.enable_ft:
+                self.copy_pkg_config('freetype')
+                tools.replace_in_file(os.path.join(self.source_folder, self._source_subfolder, "src", "cairo-ft-font.c"),
+                                      '#if HAVE_UNISTD_H', '#ifdef HAVE_UNISTD_H')
+
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
 
-            configure_args = ['--disable-ft']
+            configure_args = ['--enable-ft'] if self.options.enable_ft else ['--disable-ft']
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
@@ -119,10 +128,10 @@ class CairoConan(ConanFile):
                 env_build.flags.append('-Wno-enum-conversion')
             with tools.environment_append(env_build.vars):
                 self.run('PKG_CONFIG_PATH=%s NOCONFIGURE=1 ./autogen.sh' % pkg_config_path)
-            env_build.pic = self.options.fPIC
-            env_build.configure(args=configure_args, pkg_config_paths=[pkg_config_path])
-            env_build.make()
-            env_build.install()
+                env_build.pic = self.options.fPIC
+                env_build.configure(args=configure_args, pkg_config_paths=[pkg_config_path])
+                env_build.make()
+                env_build.install()
 
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
