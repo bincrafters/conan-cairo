@@ -40,6 +40,8 @@ class CairoConan(ConanFile):
             self.build_requires('7z_installer/1.0@conan/stable')
             if "CONAN_BASH_PATH" not in os.environ:
                 self.build_requires('msys2_installer/20161025@bincrafters/stable')
+        if not tools.which("pkg-config"):
+            self.build_requires("pkg-config_installer/0.29.2@bincrafters/stable")
 
     @property
     def is_msvc(self):
