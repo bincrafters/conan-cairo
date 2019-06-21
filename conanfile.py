@@ -26,7 +26,8 @@ class CairoConan(ConanFile):
     requires = (
         "zlib/1.2.11@conan/stable",
         "pixman/0.38.0@bincrafters/stable",
-        "libpng/1.6.37@bincrafters/stable"
+        "libpng/1.6.37@bincrafters/stable",
+        "freetype/2.9.1@bincrafters/stable"
     )
 
     def config_options(self):
@@ -99,13 +100,13 @@ class CairoConan(ConanFile):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)', '')
             os.makedirs('pkgconfig')
-            for lib in ['libpng', 'zlib', 'pixman']:
+            for lib in ['libpng', 'zlib', 'pixman', 'freetype']:
                 self.copy_pkg_config(lib)
 
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
 
-            configure_args = ['--disable-ft']
+            configure_args = ['']
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
@@ -135,6 +136,7 @@ class CairoConan(ConanFile):
             self.copy(pattern="cairo-deprecated.h", dst=inc, src=src)
             self.copy(pattern="cairo-win32.h", dst=inc, src=src)
             self.copy(pattern="cairo-script.h", dst=inc, src=src)
+            self.copy(pattern="cairo-ft.h", dst=inc, src=src)
             self.copy(pattern="cairo-ps.h", dst=inc, src=src)
             self.copy(pattern="cairo-pdf.h", dst=inc, src=src)
             self.copy(pattern="cairo-svg.h", dst=inc, src=src)
