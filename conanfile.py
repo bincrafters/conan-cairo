@@ -26,7 +26,7 @@ class CairoConan(ConanFile):
     requires = (
         "zlib/1.2.11@conan/stable",
         "pixman/0.38.0@bincrafters/stable",
-        "libpng/1.6.36@bincrafters/stable"
+        "libpng/1.6.37@bincrafters/stable"
     )
 
     def config_options(self):
