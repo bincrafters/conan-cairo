@@ -27,7 +27,7 @@ class CairoConan(ConanFile):
         "zlib/1.2.11@conan/stable",
         "pixman/0.38.0@bincrafters/stable",
         "libpng/1.6.37@bincrafters/stable",
-        "freetype/2.9.1@bincrafters/stable"
+        "freetype/2.10.0@bincrafters/stable"
     )
 
     def config_options(self):
