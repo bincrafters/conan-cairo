@@ -40,7 +40,10 @@ class CairoConan(ConanFile):
     def build_requirements(self):
         if self.settings.os == 'Windows':
             self.build_requires('7z_installer/1.0@conan/stable')
-            self.build_requires('msys2_installer/20161025@bincrafters/stable')
+            if "CONAN_BASH_PATH" not in os.environ:
+                self.build_requires('msys2_installer/20161025@bincrafters/stable')
+        if not tools.which("pkg-config"):
+            self.build_requires("pkg-config_installer/0.29.2@bincrafters/stable")
 
     @property
     def is_msvc(self):
@@ -103,7 +106,7 @@ class CairoConan(ConanFile):
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
                                   '')
             os.makedirs('pkgconfig')
-            for lib in ['libpng', 'zlib', 'pixman']:
+            for lib in ['libpng', 'zlib', 'pixman', 'freetype']:
                 self.copy_pkg_config(lib)
 
             if self.options.enable_ft:
@@ -144,6 +147,7 @@ class CairoConan(ConanFile):
             self.copy(pattern="cairo-deprecated.h", dst=inc, src=src)
             self.copy(pattern="cairo-win32.h", dst=inc, src=src)
             self.copy(pattern="cairo-script.h", dst=inc, src=src)
+            self.copy(pattern="cairo-ft.h", dst=inc, src=src)
             self.copy(pattern="cairo-ps.h", dst=inc, src=src)
             self.copy(pattern="cairo-pdf.h", dst=inc, src=src)
             self.copy(pattern="cairo-svg.h", dst=inc, src=src)
