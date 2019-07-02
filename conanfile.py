@@ -31,11 +31,11 @@ class CairoConan(ConanFile):
 
     def requirements(self):
         if self.options.enable_ft:
-            self.requires("freetype/2.9.1@bincrafters/stable")
+            self.requires("freetype/2.10.0@bincrafters/stable")
 
         self.requires("zlib/1.2.11@conan/stable")
         self.requires("pixman/0.38.0@bincrafters/stable")
-        self.requires("libpng/1.6.36@bincrafters/stable")
+        self.requires("libpng/1.6.37@bincrafters/stable")
 
     def build_requirements(self):
         if self.settings.os == 'Windows':
