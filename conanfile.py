@@ -18,8 +18,9 @@ class CairoConan(ConanFile):
     license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False], "enable_ft": [True, False]}
-    default_options = {'shared': False, 'fPIC': True, "enable_ft": True}
+    options = {"shared": [True, False], "fPIC": [True, False], "enable_ft": [True, False], "enable_fc": [True, False]}
+    default_options = {'shared': False, 'fPIC': True, "enable_ft": True, "enable_fc": True}
+    generators = "pkg_config"
 
     _source_subfolder = "source_subfolder"
     _build_subfolder = "build_subfolder"
@@ -32,7 +33,8 @@ class CairoConan(ConanFile):
     def requirements(self):
         if self.options.enable_ft:
             self.requires("freetype/2.10.0@bincrafters/stable")
-
+        if self.options.enable_fc:
+            self.requires("fontconfig/2.13.91@conan/stable")
         self.requires("zlib/1.2.11@conan/stable")
         self.requires("pixman/0.38.0@bincrafters/stable")
         self.requires("libpng/1.6.37@bincrafters/stable")
@@ -106,8 +108,10 @@ class CairoConan(ConanFile):
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
                                   '')
             os.makedirs('pkgconfig')
-            for lib in ['libpng', 'zlib', 'pixman', 'freetype']:
+            # FIXME : should be replaced by pkg_config generator once components feature is out
+            for lib in ['libpng', 'zlib', 'pixman', 'freetype', 'fontconfig', 'Expat']:
                 self.copy_pkg_config(lib)
+            shutil.copy(os.path.join(self.build_folder, "bzip2.pc"), os.path.join("pkgconfig", "bzip2.pc"))
 
             if self.options.enable_ft:
                 self.copy_pkg_config('freetype')
@@ -117,7 +121,8 @@ class CairoConan(ConanFile):
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
 
-            configure_args = ['--enable-ft'] if self.options.enable_ft else ['--disable-ft']
+            configure_args = ['--enable-ft' if self.options.enable_ft else '--disable-ft',
+                              '--enable-fc' if self.options.enable_fc else '--disable-fc']
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
