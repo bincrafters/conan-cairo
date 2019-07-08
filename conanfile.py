@@ -112,11 +112,12 @@ class CairoConan(ConanFile):
             for lib in ['libpng', 'zlib', 'pixman', 'freetype', 'fontconfig', 'Expat']:
                 self.copy_pkg_config(lib)
             shutil.copy(os.path.join(self.build_folder, "bzip2.pc"), os.path.join("pkgconfig", "bzip2.pc"))
-
             if self.options.enable_ft:
                 self.copy_pkg_config('freetype')
                 tools.replace_in_file(os.path.join(self.source_folder, self._source_subfolder, "src", "cairo-ft-font.c"),
                                       '#if HAVE_UNISTD_H', '#ifdef HAVE_UNISTD_H')
+                if self.settings.build_type == "Debug":
+                    tools.replace_in_file(os.path.join("pkgconfig", "freetype2.pc"), "-lfreetype", "-lfreetyped")
 
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
