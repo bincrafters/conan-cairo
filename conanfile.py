@@ -29,11 +29,12 @@ class CairoConan(ConanFile):
         del self.settings.compiler.libcxx
         if self.settings.os == 'Windows':
             del self.options.fPIC
+            del self.options.enable_fc
 
     def requirements(self):
         if self.options.enable_ft:
             self.requires("freetype/2.10.0@bincrafters/stable")
-        if self.options.enable_fc:
+        if self.settings.os != "Windows" and self.options.enable_fc:
             self.requires("fontconfig/2.13.91@conan/stable")
         self.requires("zlib/1.2.11@conan/stable")
         self.requires("pixman/0.38.0@bincrafters/stable")
@@ -122,8 +123,9 @@ class CairoConan(ConanFile):
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
 
-            configure_args = ['--enable-ft' if self.options.enable_ft else '--disable-ft',
-                              '--enable-fc' if self.options.enable_fc else '--disable-fc']
+            configure_args = ['--enable-ft' if self.options.enable_ft else '--disable-ft']
+            if self.settings.os != "Windows":
+                configure_args.append('--enable-fc' if self.options.enable_fc else '--disable-fc')
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
