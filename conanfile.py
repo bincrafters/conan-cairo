@@ -68,11 +68,41 @@ class CairoConan(ConanFile):
 
     def build(self):
         if self.is_msvc:
-            self.build_msvc()
+            self._build_msvc()
         else:
-            self.build_configure()
+            self._build_configure()
 
-    def build_msvc(self):
+    def _make_pkg_config(self):
+        def process_pkg_config(filename):
+            tools.replace_in_file(filename, "@prefix@", self.package_folder.replace("\\", "/"))
+            tools.replace_in_file(filename, "@exec_prefix@", "${prefix}")
+            tools.replace_in_file(filename, "@libdir@", "${prefix}/lib")
+            tools.replace_in_file(filename, "@includedir@", "${prefix}/include")
+            tools.replace_in_file(filename, "@VERSION@", self.version)
+
+        with tools.chdir(os.path.join(self._source_subfolder, "src")):
+            shutil.copy("cairo.pc.in", "cairo.pc")
+            shutil.copy("cairo-features.pc.in", "cairo-win32.pc")
+            process_pkg_config("cairo.pc")
+            libs = []
+            libs.extend([self.deps_cpp_info['pixman'].libs])
+            libs.extend([self.deps_cpp_info['freetype'].libs])
+            libs.extend([self.deps_cpp_info['libpng'].libs])
+            libs.extend([self.deps_cpp_info['bzip2'].libs])
+            libs.extend([self.deps_cpp_info['zlib'].libs])
+            libs = " ".join(["-l%s" % lib for lib in libs])
+            tools.replace_in_file("cairo.pc", "@PKGCONFIG_REQUIRES@", "Requires.private")
+            tools.replace_in_file("cairo.pc", "@CAIRO_REQUIRES@", "pixman-1 libpng")
+            tools.replace_in_file("cairo.pc", "@CAIRO_NONPKGCONFIG_LIBS@", libs)
+            process_pkg_config("cairo-win32.pc")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_PC@", "cairo-win32")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_NAME@", "cairo-win32")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_BASE@", "cairo")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_REQUIRES@", "pixman-1 libpng")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_NONPKGCONFIG_LIBS@", "")
+            tools.replace_in_file("cairo-win32.pc", "@FEATURE_NONPKGCONFIG_EXTRA_LIBS@", "")
+
+    def _build_msvc(self):
         with tools.chdir(self._source_subfolder):
             # https://cairographics.org/end_to_end_build_for_win32/
             win32_common = os.path.join('build', 'Makefile.win32.common')
@@ -90,7 +120,9 @@ class CairoConan(ConanFile):
                     env_build = AutoToolsBuildEnvironment(self)
                     env_build.make(args=['-f', 'Makefile.win32', 'CFG=%s' % str(self.settings.build_type).lower()])
 
-    def copy_pkg_config(self, name):
+        self._make_pkg_config()
+
+    def _copy_pkg_config(self, name):
         root = self.deps_cpp_info[name].rootpath
         pc_dir = os.path.join(root, 'lib', 'pkgconfig')
         pc_files = glob.glob('%s/*.pc' % pc_dir)
@@ -103,7 +135,7 @@ class CairoConan(ConanFile):
             prefix = tools.unix_path(root) if self.settings.os == 'Windows' else root
             tools.replace_prefix_in_pc_file(new_pc, prefix)
 
-    def build_configure(self):
+    def _build_configure(self):
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
@@ -111,10 +143,10 @@ class CairoConan(ConanFile):
             os.makedirs('pkgconfig')
             # FIXME : should be replaced by pkg_config generator once components feature is out
             for lib in ['libpng', 'zlib', 'pixman', 'freetype', 'fontconfig', 'Expat']:
-                self.copy_pkg_config(lib)
+                self._copy_pkg_config(lib)
             shutil.copy(os.path.join(self.build_folder, "bzip2.pc"), os.path.join("pkgconfig", "bzip2.pc"))
             if self.options.enable_ft:
-                self.copy_pkg_config('freetype')
+                self._copy_pkg_config('freetype')
                 tools.replace_in_file(os.path.join(self.source_folder, self._source_subfolder, "src", "cairo-ft-font.c"),
                                       '#if HAVE_UNISTD_H', '#ifdef HAVE_UNISTD_H')
                 if self.settings.build_type == "Debug":
@@ -159,6 +191,7 @@ class CairoConan(ConanFile):
             self.copy(pattern="cairo-ps.h", dst=inc, src=src)
             self.copy(pattern="cairo-pdf.h", dst=inc, src=src)
             self.copy(pattern="cairo-svg.h", dst=inc, src=src)
+            self.copy(pattern="*.pc", dst=os.path.join("lib", "pkgconfig"), src=src)
             if self.options.shared:
                 self.copy(pattern="*cairo.lib", dst="lib", src=src, keep_path=False)
                 self.copy(pattern="*cairo.dll", dst="bin", src=src, keep_path=False)
