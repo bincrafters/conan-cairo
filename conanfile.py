@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 from conans import ConanFile, AutoToolsBuildEnvironment, tools, VisualStudioBuildEnvironment
 import os
 import glob
@@ -27,24 +24,25 @@ class CairoConan(ConanFile):
 
     def config_options(self):
         del self.settings.compiler.libcxx
+        del self.settings.compiler.cppstd
         if self.settings.os == 'Windows':
             del self.options.fPIC
             del self.options.enable_fc
 
     def requirements(self):
         if self.options.enable_ft:
-            self.requires("freetype/2.10.0@bincrafters/stable")
+            self.requires("freetype/2.10.0")
         if self.settings.os != "Windows" and self.options.enable_fc:
             self.requires("fontconfig/2.13.91@conan/stable")
-        self.requires("zlib/1.2.11@conan/stable")
+        self.requires("zlib/1.2.11")
         self.requires("pixman/0.38.0@bincrafters/stable")
-        self.requires("libpng/1.6.37@bincrafters/stable")
+        self.requires("libpng/1.6.37")
 
     def build_requirements(self):
         if self.settings.os == 'Windows':
             self.build_requires('7z_installer/1.0@conan/stable')
             if "CONAN_BASH_PATH" not in os.environ:
-                self.build_requires('msys2_installer/20161025@bincrafters/stable')
+                self.build_requires('msys2/20161025')
         if not tools.which("pkg-config"):
             self.build_requires("pkg-config_installer/0.29.2@bincrafters/stable")
 
