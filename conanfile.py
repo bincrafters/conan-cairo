@@ -11,7 +11,6 @@ class CairoConan(ConanFile):
     topics = ("conan", "cairo", "graphics")
     url = "https://github.com/bincrafters/conan-cairo"
     homepage = "https://cairographics.org/"
-    author = "Bincrafters <bincrafters@gmail.com>"
     license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
     settings = "os", "arch", "compiler", "build_type"
