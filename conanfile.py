@@ -39,9 +39,9 @@ class CairoConan(ConanFile):
 
     def build_requirements(self):
         if self.settings.os == 'Windows':
-            self.build_requires('7z_installer/1.0@conan/stable')
+            self.build_requires('7zip/19.00')
             if "CONAN_BASH_PATH" not in os.environ:
-                self.build_requires('msys2/20161025')
+                self.build_requires('msys2/20190524')
         if not tools.which("pkg-config"):
             self.build_requires("pkg-config_installer/0.29.2@bincrafters/stable")
 
