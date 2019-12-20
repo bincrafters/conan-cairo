@@ -119,32 +119,18 @@ class CairoConan(ConanFile):
 
         self._make_pkg_config()
 
-    def _copy_pkg_config(self, name):
-        root = self.deps_cpp_info[name].rootpath
-        pc_dir = os.path.join(root, 'lib', 'pkgconfig')
-        pc_files = glob.glob('%s/*.pc' % pc_dir)
-        if not pc_files:  # zlib store .pc in root
-            pc_files = glob.glob('%s/*.pc' % root)
-        for pc_name in pc_files:
-            new_pc = os.path.join('pkgconfig', os.path.basename(pc_name))
-            self.output.warn('copy .pc file %s' % os.path.basename(pc_name))
-            shutil.copy(pc_name, new_pc)
-            prefix = tools.unix_path(root) if self.settings.os == 'Windows' else root
-            tools.replace_prefix_in_pc_file(new_pc, prefix)
-
     def _build_configure(self):
         shutil.move('zlib.pc', 'ZLIB.pc')
         shutil.move('bzip2.pc', 'BZip2.pc')
+        shutil.move('expat.pc', 'EXPAT.pc')
+        shutil.move('pixman.pc', 'pixman-1.pc')
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
                                   '')
             os.makedirs('pkgconfig')
-            # FIXME : should be replaced by pkg_config generator once components feature is out
-            for lib in ['pixman', 'fontconfig']:
-                self._copy_pkg_config(lib)
-            for lib in ['libpng', 'ZLIB', 'expat', 'BZip2', 'freetype2']:
-                shutil.copy(os.path.join(self.build_folder, "%s.pc" % lib), os.path.join("pkgconfig", "%s.pc" % lib))
+            for pc_name in  glob.glob('%s/*.pc' % self.build_folder):
+                shutil.copy(pc_name, os.path.join('pkgconfig', os.path.basename(pc_name)))
             if self.options.enable_ft:
                 tools.replace_in_file(os.path.join(self.source_folder, self._source_subfolder, "src", "cairo-ft-font.c"),
                                       '#if HAVE_UNISTD_H', '#ifdef HAVE_UNISTD_H')
