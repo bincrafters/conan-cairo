@@ -133,21 +133,21 @@ class CairoConan(ConanFile):
             tools.replace_prefix_in_pc_file(new_pc, prefix)
 
     def _build_configure(self):
+        shutil.move('zlib.pc', 'ZLIB.pc')
+        shutil.move('bzip2.pc', 'BZip2.pc')
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
                                   '')
             os.makedirs('pkgconfig')
             # FIXME : should be replaced by pkg_config generator once components feature is out
-            for lib in ['libpng', 'zlib', 'pixman', 'freetype', 'fontconfig', 'Expat']:
+            for lib in ['pixman', 'fontconfig']:
                 self._copy_pkg_config(lib)
-            shutil.copy(os.path.join(self.build_folder, "bzip2.pc"), os.path.join("pkgconfig", "bzip2.pc"))
+            for lib in ['libpng', 'ZLIB', 'expat', 'BZip2', 'freetype2']:
+                shutil.copy(os.path.join(self.build_folder, "%s.pc" % lib), os.path.join("pkgconfig", "%s.pc" % lib))
             if self.options.enable_ft:
-                self._copy_pkg_config('freetype')
                 tools.replace_in_file(os.path.join(self.source_folder, self._source_subfolder, "src", "cairo-ft-font.c"),
                                       '#if HAVE_UNISTD_H', '#ifdef HAVE_UNISTD_H')
-                if self.settings.build_type == "Debug":
-                    tools.replace_in_file(os.path.join("pkgconfig", "freetype2.pc"), "-lfreetype", "-lfreetyped")
 
             pkg_config_path = os.path.abspath('pkgconfig')
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
