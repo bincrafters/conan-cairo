@@ -121,7 +121,6 @@ class CairoConan(ConanFile):
 
     def _build_configure(self):
         shutil.move('zlib.pc', 'ZLIB.pc')
-        shutil.move('bzip2.pc', 'BZip2.pc')
         shutil.move('expat.pc', 'EXPAT.pc')
         shutil.move('pixman.pc', 'pixman-1.pc')
         with tools.chdir(self._source_subfolder):
