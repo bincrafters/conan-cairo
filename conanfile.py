@@ -120,7 +120,6 @@ class CairoConan(ConanFile):
         self._make_pkg_config()
 
     def _build_configure(self):
-        shutil.move('expat.pc', 'EXPAT.pc')
         shutil.move('pixman.pc', 'pixman-1.pc')
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
