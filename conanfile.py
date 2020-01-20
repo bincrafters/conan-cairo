@@ -34,7 +34,7 @@ class CairoConan(ConanFile):
         if self.settings.os != "Windows" and self.options.enable_fc:
             self.requires("fontconfig/2.13.91@conan/stable")
         self.requires("zlib/1.2.11")
-        self.requires("pixman/0.38.0@bincrafters/stable")
+        self.requires("pixman/0.38.4")
         self.requires("libpng/1.6.37")
 
     def build_requirements(self):
@@ -120,7 +120,6 @@ class CairoConan(ConanFile):
         self._make_pkg_config()
 
     def _build_configure(self):
-        shutil.move('pixman.pc', 'pixman-1.pc')
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
