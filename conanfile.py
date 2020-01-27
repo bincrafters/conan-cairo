@@ -20,14 +20,16 @@ class CairoConan(ConanFile):
         "enable_fc": [True, False],
         "enable_xlib": [True, False],
         "enable_xlib_xrender": [True, False],
-        "enable_xcb": [True, False]}
+        "enable_xcb": [True, False],
+        "enable_glib": [True, False]}
     default_options = {'shared': False,
         'fPIC': True,
         "enable_ft": True,
         "enable_fc": True,
         "enable_xlib": True,
         "enable_xlib_xrender": False,
-        "enable_xcb": True}
+        "enable_xcb": True,
+        "enable_glib": True}
     generators = "pkg_config"
 
     _source_subfolder = "source_subfolder"
@@ -57,6 +59,8 @@ class CairoConan(ConanFile):
                 self.requires("libxrender/0.9.10@bincrafters/stable")
             if self.options.enable_xcb:
                 self.requires("libxcb/1.13.1@bincrafters/stable")
+        if self.options.enable_glib:
+            self.requires("glib/2.58.3@bincrafters/stable")
         self.requires("zlib/1.2.11")
         self.requires("pixman/0.38.4")
         self.requires("libpng/1.6.37")
@@ -177,6 +181,7 @@ class CairoConan(ConanFile):
                 configure_args.append('--enable-xlib' if self.options.enable_xlib else '--disable-xlib')
                 configure_args.append('--enable-xlib_xrender' if self.options.enable_xlib_xrender else '--disable-xlib_xrender')
                 configure_args.append('--enable-xcb' if self.options.enable_xcb else '--disable-xcb')
+            configure_args.append('--enable-gobject' if self.options.enable_glib else '--disable-glib')
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
