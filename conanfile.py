@@ -14,8 +14,22 @@ class CairoConan(ConanFile):
     license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False], "enable_ft": [True, False], "enable_fc": [True, False]}
-    default_options = {'shared': False, 'fPIC': True, "enable_ft": True, "enable_fc": True}
+    options = {"shared": [True, False],
+        "fPIC": [True, False],
+        "enable_ft": [True, False],
+        "enable_fc": [True, False],
+        "enable_xlib": [True, False],
+        "enable_xlib_xrender": [True, False],
+        "enable_xcb": [True, False],
+        "enable_glib": [True, False]}
+    default_options = {'shared': False,
+        'fPIC': True,
+        "enable_ft": True,
+        "enable_fc": True,
+        "enable_xlib": True,
+        "enable_xlib_xrender": False,
+        "enable_xcb": True,
+        "enable_glib": True}
     generators = "pkg_config"
 
     _source_subfolder = "source_subfolder"
@@ -27,14 +41,28 @@ class CairoConan(ConanFile):
         if self.settings.os == 'Windows':
             del self.options.fPIC
             del self.options.enable_fc
+        if self.settings.os != 'Linux':
+            del self.options.enable_xlib
+            del self.options.enable_xlib_xrender
+            del self.options.enable_xcb
 
     def requirements(self):
         if self.options.enable_ft:
             self.requires("freetype/2.10.1")
         if self.settings.os != "Windows" and self.options.enable_fc:
             self.requires("fontconfig/2.13.91@conan/stable")
+        if self.settings.os == 'Linux':
+            if self.options.enable_xlib:
+                self.requires("libx11/1.6.8@bincrafters/stable")
+                self.requires("libxext/1.3.4@bincrafters/stable")
+            if self.options.enable_xlib_xrender:
+                self.requires("libxrender/0.9.10@bincrafters/stable")
+            if self.options.enable_xcb:
+                self.requires("libxcb/1.13.1@bincrafters/stable")
+        if self.options.enable_glib:
+            self.requires("glib/2.58.3@bincrafters/stable")
         self.requires("zlib/1.2.11")
-        self.requires("pixman/0.38.0@bincrafters/stable")
+        self.requires("pixman/0.38.4")
         self.requires("libpng/1.6.37")
 
     def build_requirements(self):
@@ -120,7 +148,13 @@ class CairoConan(ConanFile):
         self._make_pkg_config()
 
     def _build_configure(self):
-        shutil.move('pixman.pc', 'pixman-1.pc')
+        for package in self.deps_cpp_info.deps:
+            lib_path = self.deps_cpp_info[package].rootpath
+            for dirpath, _, filenames in os.walk(lib_path):
+                for filename in filenames:
+                    if filename.endswith('.pc'):
+                        shutil.copyfile(os.path.join(dirpath, filename), filename)
+                        tools.replace_prefix_in_pc_file(filename, lib_path)
         with tools.chdir(self._source_subfolder):
             # disable build of test suite
             tools.replace_in_file(os.path.join('test', 'Makefile.am'), 'noinst_PROGRAMS = cairo-test-suite$(EXEEXT)',
@@ -138,6 +172,11 @@ class CairoConan(ConanFile):
             configure_args = ['--enable-ft' if self.options.enable_ft else '--disable-ft']
             if self.settings.os != "Windows":
                 configure_args.append('--enable-fc' if self.options.enable_fc else '--disable-fc')
+            if self.settings.os == 'Linux':
+                configure_args.append('--enable-xlib' if self.options.enable_xlib else '--disable-xlib')
+                configure_args.append('--enable-xlib_xrender' if self.options.enable_xlib_xrender else '--disable-xlib_xrender')
+                configure_args.append('--enable-xcb' if self.options.enable_xcb else '--disable-xcb')
+            configure_args.append('--enable-gobject' if self.options.enable_glib else '--disable-glib')
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
