@@ -170,7 +170,6 @@ class CairoConan(ConanFile):
             pkg_config_path = tools.unix_path(pkg_config_path) if self.settings.os == 'Windows' else pkg_config_path
 
             configure_args = ['--enable-ft' if self.options.enable_ft else '--disable-ft']
-            configure_args.append('--enable-quartz-font=no')
             if self.settings.os != "Windows":
                 configure_args.append('--enable-fc' if self.options.enable_fc else '--disable-fc')
             if self.settings.os == 'Linux':
