@@ -176,7 +176,7 @@ class CairoConan(ConanFile):
                 configure_args.append('--enable-xlib' if self.options.enable_xlib else '--disable-xlib')
                 configure_args.append('--enable-xlib_xrender' if self.options.enable_xlib_xrender else '--disable-xlib_xrender')
                 configure_args.append('--enable-xcb' if self.options.enable_xcb else '--disable-xcb')
-            configure_args.append('--enable-gobject' if self.options.enable_glib else '--disable-glib')
+            configure_args.append('--enable-gobject' if self.options.enable_glib else '--disable-gobject')
             if self.options.shared:
                 configure_args.extend(['--disable-static', '--enable-shared'])
             else:
@@ -220,7 +220,9 @@ class CairoConan(ConanFile):
                             os.path.join(self.package_folder, 'lib', "cairo.lib"))
 
     def package_info(self):
-        self.cpp_info.libs = ['cairo']
+        if not self.is_msvc and self.options.enable_glib:
+            self.cpp_info.libs.append('cairo-gobject')
+        self.cpp_info.libs.append('cairo')
         if self.is_msvc and not self.options.shared:
             self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
         self.cpp_info.includedirs.append(os.path.join('include', 'cairo'))
