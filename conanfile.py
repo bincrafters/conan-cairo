@@ -60,7 +60,7 @@ class CairoConan(ConanFile):
             if self.options.enable_xcb:
                 self.requires("libxcb/1.13.1@bincrafters/stable")
         if self.options.enable_glib:
-            self.requires("glib/2.63.3@bincrafters/stable")
+            self.requires("glib/2.64.0@bincrafters/stable")
         self.requires("zlib/1.2.11")
         self.requires("pixman/0.38.4")
         self.requires("libpng/1.6.37")
