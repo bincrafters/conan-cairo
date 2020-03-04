@@ -13,6 +13,7 @@ class CairoConan(ConanFile):
     homepage = "https://cairographics.org/"
     license = ("LGPL-2.1-only", "MPL-1.1")
     exports = ["LICENSE.md"]
+    exports_sources = ["patches/*"]
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False],
         "fPIC": [True, False],
@@ -90,6 +91,10 @@ class CairoConan(ConanFile):
             self.run('tar -xJf %s' % archive_name)
         os.rename('cairo-%s' % self.version, self._source_subfolder)
         os.unlink(archive_name)
+        
+        for filename in glob.glob("patches/*.patch"):
+            self.output.info('applying patch "%s"' % filename)
+            tools.patch(base_path=self._source_subfolder, patch_file=filename)
 
     def build(self):
         if self.is_msvc:
@@ -133,17 +138,28 @@ class CairoConan(ConanFile):
             win32_common = os.path.join('build', 'Makefile.win32.common')
             tools.replace_in_file(win32_common, '-MD ', '-%s ' % self.settings.compiler.runtime)
             tools.replace_in_file(win32_common, '-MDd ', '-%s ' % self.settings.compiler.runtime)
-            tools.replace_in_file(win32_common, '$(ZLIB_PATH)/zdll.lib', self.deps_cpp_info['zlib'].libs[0] + '.lib')
-            tools.replace_in_file(win32_common, '$(LIBPNG_PATH)/libpng.lib',
-                                  self.deps_cpp_info['libpng'].libs[0] + '.lib')
-            tools.replace_in_file(win32_common, '$(PIXMAN_PATH)/pixman/$(CFG)/pixman-1.lib',
-                                  self.deps_cpp_info['pixman'].libs[0] + '.lib')
+            tools.replace_in_file(win32_common, '$(ZLIB_PATH)/lib/zlib1.lib',
+                                                self.deps_cpp_info['zlib'].libs[0] + '.lib')
+            tools.replace_in_file(win32_common, '$(LIBPNG_PATH)/lib/libpng16.lib',
+                                                self.deps_cpp_info['libpng'].libs[0] + '.lib')
+            tools.replace_in_file(win32_common, '$(FREETYPE_PATH)/lib/freetype.lib',
+                                                self.deps_cpp_info['freetype'].libs[0] + '.lib')
             with tools.vcvars(self.settings):
                 env_msvc = VisualStudioBuildEnvironment(self)
                 env_msvc.flags.append('/FS')  # C1041 if multiple CL.EXE write to the same .PDB file, please use /FS
                 with tools.environment_append(env_msvc.vars):
                     env_build = AutoToolsBuildEnvironment(self)
-                    env_build.make(args=['-f', 'Makefile.win32', 'CFG=%s' % str(self.settings.build_type).lower()])
+                    args=['-f', 'Makefile.win32']
+                    args.append('CFG=%s' % str(self.settings.build_type).lower())
+                    args.append('CAIRO_HAS_FC_FONT=0')
+                    args.append('ZLIB_PATH=%s' % self.deps_cpp_info['zlib'].rootpath)
+                    args.append('LIBPNG_PATH=%s' % self.deps_cpp_info['libpng'].rootpath)
+                    args.append('PIXMAN_PATH=%s' % self.deps_cpp_info['pixman'].rootpath)
+                    args.append('FREETYPE_PATH=%s' % self.deps_cpp_info['freetype'].rootpath)
+                    args.append('GOBJECT_PATH=%s' % self.deps_cpp_info['glib'].rootpath)
+                    
+                    env_build.make(args=args)
+                    env_build.make(args=['-C', os.path.join('util', 'cairo-gobject')] + args)
 
         self._make_pkg_config()
 
@@ -199,6 +215,7 @@ class CairoConan(ConanFile):
         self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
         if self.is_msvc:
             src = os.path.join(self._source_subfolder, 'src')
+            cairo_gobject = os.path.join(self._source_subfolder, 'util', 'cairo-gobject')
             inc = os.path.join('include', 'cairo')
             self.copy(pattern="cairo-version.h", dst=inc, src=self._source_subfolder)
             self.copy(pattern="cairo-features.h", dst=inc, src=src)
@@ -210,12 +227,16 @@ class CairoConan(ConanFile):
             self.copy(pattern="cairo-ps.h", dst=inc, src=src)
             self.copy(pattern="cairo-pdf.h", dst=inc, src=src)
             self.copy(pattern="cairo-svg.h", dst=inc, src=src)
+            self.copy(pattern="cairo-gobject.h", dst=inc, src=cairo_gobject)
             self.copy(pattern="*.pc", dst=os.path.join("lib", "pkgconfig"), src=src)
             if self.options.shared:
                 self.copy(pattern="*cairo.lib", dst="lib", src=src, keep_path=False)
                 self.copy(pattern="*cairo.dll", dst="bin", src=src, keep_path=False)
+                self.copy(pattern="*cairo-gobject.lib", dst="lib", src=cairo_gobject, keep_path=False)
+                self.copy(pattern="*cairo-gobject.dll", dst="bin", src=cairo_gobject, keep_path=False)
             else:
                 self.copy(pattern="*cairo-static.lib", dst="lib", src=src, keep_path=False)
+                self.copy(pattern="*cairo-gobject.lib", dst="lib", src=cairo_gobject, keep_path=False)
                 shutil.move(os.path.join(self.package_folder, 'lib', "cairo-static.lib"),
                             os.path.join(self.package_folder, 'lib', "cairo.lib"))
 
