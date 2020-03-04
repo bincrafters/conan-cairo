@@ -247,3 +247,5 @@ class CairoConan(ConanFile):
         if self.is_msvc and not self.options.shared:
             self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
         self.cpp_info.includedirs.append(os.path.join('include', 'cairo'))
+        if self.settings.os == "Windows":
+            self.cpp_info.system_libs.extend(['gdi32','msimg32','user32'])
