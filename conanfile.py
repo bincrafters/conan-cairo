@@ -12,7 +12,6 @@ class CairoConan(ConanFile):
     url = "https://github.com/bincrafters/conan-cairo"
     homepage = "https://cairographics.org/"
     license = ("LGPL-2.1-only", "MPL-1.1")
-    exports = ["LICENSE.md"]
     exports_sources = ["patches/*"]
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False],
