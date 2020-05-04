@@ -12,7 +12,6 @@ class CairoConan(ConanFile):
     url = "https://github.com/bincrafters/conan-cairo"
     homepage = "https://cairographics.org/"
     license = ("LGPL-2.1-only", "MPL-1.1")
-    exports = ["LICENSE.md"]
     exports_sources = ["patches/*"]
     settings = "os", "arch", "compiler", "build_type"
     options = {"shared": [True, False],
@@ -247,3 +246,5 @@ class CairoConan(ConanFile):
         if self.is_msvc and not self.options.shared:
             self.cpp_info.defines.append('CAIRO_WIN32_STATIC_BUILD=1')
         self.cpp_info.includedirs.append(os.path.join('include', 'cairo'))
+        if self.settings.os == "Windows":
+            self.cpp_info.system_libs.extend(['gdi32','msimg32','user32'])
