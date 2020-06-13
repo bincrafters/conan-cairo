@@ -62,7 +62,7 @@ class CairoConan(ConanFile):
         if self.options.enable_glib:
             self.requires("glib/2.64.0@bincrafters/stable")
         self.requires("zlib/1.2.11")
-        self.requires("pixman/0.38.4")
+        self.requires("pixman/0.40.0")
         self.requires("libpng/1.6.37")
 
     def build_requirements(self):
