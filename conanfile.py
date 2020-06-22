@@ -50,19 +50,14 @@ class CairoConan(ConanFile):
         if self.options.enable_ft:
             self.requires("freetype/2.10.1")
         if self.settings.os != "Windows" and self.options.enable_fc:
-            self.requires("fontconfig/2.13.91@conan/stable")
+            self.requires("fontconfig/2.13.91")
         if self.settings.os == 'Linux':
-            if self.options.enable_xlib:
-                self.requires("libx11/1.6.8@bincrafters/stable")
-                self.requires("libxext/1.3.4@bincrafters/stable")
-            if self.options.enable_xlib_xrender:
-                self.requires("libxrender/0.9.10@bincrafters/stable")
-            if self.options.enable_xcb:
-                self.requires("libxcb/1.13.1@bincrafters/stable")
+            if self.options.enable_xlib or self.options.enable_xlib_xrender or self.options.enable_xcb:
+                self.requires("xorg/system")
         if self.options.enable_glib:
             self.requires("glib/2.64.0@bincrafters/stable")
         self.requires("zlib/1.2.11")
-        self.requires("pixman/0.38.4")
+        self.requires("pixman/0.40.0")
         self.requires("libpng/1.6.37")
 
     def build_requirements(self):
