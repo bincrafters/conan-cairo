@@ -6,7 +6,6 @@ import shutil
 
 class CairoConan(ConanFile):
     name = "cairo"
-    version = "1.17.2"
     description = "Cairo is a 2D graphics library with support for multiple output devices"
     topics = ("conan", "cairo", "graphics")
     url = "https://github.com/bincrafters/conan-cairo"
@@ -61,36 +60,23 @@ class CairoConan(ConanFile):
         self.requires("libpng/1.6.37")
 
     def build_requirements(self):
-        if self.settings.os == 'Windows':
-            self.build_requires('7zip/19.00')
-            if "CONAN_BASH_PATH" not in os.environ:
-                self.build_requires('msys2/20190524')
-        if not tools.which("pkg-config"):
-            self.build_requires("pkg-config_installer/0.29.2@bincrafters/stable")
+        if tools.os_info.is_windows and not tools.get_env("CONAN_BASH_PATH"):
+            self.build_requires('msys2/20190524')
+        self.build_requires("pkgconf/1.7.3")
 
     @property
     def is_msvc(self):
         return self.settings.compiler == 'Visual Studio'
 
     def source(self):
-        tarball_name = 'cairo-%s.tar' % self.version
-        archive_name = '%s.xz' % tarball_name
-        tools.download('https://www.cairographics.org/snapshots/%s' % archive_name, archive_name)
+        tools.get(**self.conan_data["sources"][self.version])
 
-        if self.settings.os == 'Windows':
-            self.run('7z x %s' % archive_name)
-            self.run('7z x %s' % tarball_name)
-            os.unlink(tarball_name)
-        else:
-            self.run('tar -xJf %s' % archive_name)
         os.rename('cairo-%s' % self.version, self._source_subfolder)
-        os.unlink(archive_name)
         
-        for filename in glob.glob("patches/*.patch"):
-            self.output.info('applying patch "%s"' % filename)
-            tools.patch(base_path=self._source_subfolder, patch_file=filename)
 
     def build(self):
+        for patch in self.conan_data["patches"][self.version]:
+            tools.patch(**patch)
         if self.is_msvc:
             self._build_msvc()
         else:
